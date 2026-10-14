@@ -6,9 +6,31 @@ const fmt=s=>{s=Math.max(0,s||0);return Math.floor(s/60)+':'+(s%60).toFixed(1).p
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function drawPlat(){}   // platform buttons were removed from the header; project.platform stays in the backend (safe-area data) but is no longer user-facing
-function showTab(t){const ed=t==='editing';$('autoclips').hidden=ed;$('editing').hidden=!ed;$('projtools').style.visibility=ed?'hidden':'visible';
- for(const k of ['clips','editing']){const b=$('tab-'+k);b.classList.toggle('on',(k==='editing')===ed);b.setAttribute('aria-selected',String((k==='editing')===ed))}
- if(ed){try{vid().pause()}catch(e){}}}
+
+let origPhoneWrap = null;
+function showTab(t) {
+    const ed = t === 'editing';
+    $('autoclips').hidden = ed;
+    $('editing').hidden = !ed;
+    $('projtools').style.visibility = ed ? 'hidden' : 'visible';
+    for (const k of ['clips', 'editing']) {
+        const b = $('tab-' + k);
+        b.classList.toggle('on', (k === 'editing') === ed);
+        b.setAttribute('aria-selected', String((k === 'editing') === ed));
+    }
+    
+    const phone = $('phone');
+    if (ed) {
+        if (!origPhoneWrap) origPhoneWrap = phone.parentNode;
+        $('ed-player-wrap').appendChild(phone);
+        try { vid().pause(); } catch(e) {}
+        if (typeof updateTL === 'function') updateTL();
+    } else {
+        if (origPhoneWrap) origPhoneWrap.insertBefore(phone, origPhoneWrap.firstChild);
+        if (P) drawClips();
+    }
+}
+
 // Platform-neutral safe-area guide: the most conservative margin across every platform's UI.
 function safeArea(){const v=Object.values(SYS.safe||{});return v.length?{top:Math.max(...v.map(x=>x.top)),bottom:Math.max(...v.map(x=>x.bottom)),right:Math.max(...v.map(x=>x.right))}:{top:.1,bottom:.2,right:.14}}
 async function boot(){try{SYS=await api('/api/system');$('sys').textContent=(SYS.ffmpeg?'FFmpeg ✓':'FFmpeg MISSING')+' · ASR: '+(SYS.asr.join(', ')||'none (import .srt)')+' · enc: '+Object.values(SYS.encoders).filter(Boolean).join('/')+(SYS.face_tracking&&SYS.face_tracking.available?' · Face tracking ✓':' · Face tracking fallback');
@@ -74,18 +96,17 @@ function drawCues(){const c=clip();$('capcard').style.display=c?'block':'none';i
 function cue(i,k,v){const c=clip();const cues=c.cues.map(x=>({...x}));cues[i][k]=(k==='start'||k==='end')?parseFloat(v):v;if(k==='text'||k==='start'||k==='end')cues[i].words_status='stale';if(k==='deleted')cues.splice(i,1);patch(c.id,{cues,locked_cues:true})}
 function addCue(){const c=clip();if(!c)return;const v=vid();const t=PV.mode==='edited'?clamp(v.currentTime,0,c.out_duration||1):0;const e=clamp(t+1.5,0,c.out_duration||1);const start=Math.min(t,Math.max(0,(c.out_duration||1)-0.05));const end=Math.max(start+0.05,Math.min(c.out_duration||1,e));patch(c.id,{cues:[...(c.cues||[]),{start:+start.toFixed(2),end:+end.toFixed(2),text:'New caption',words_status:'stale'}],locked_cues:true})}
 const regenCues=()=>edit({op:'reprepare',id:CUR,params:{}});async function importSrt(inp){const fd=new FormData();fd.append('file',inp.files[0]);const r=await fetch(`/api/project/${P.id}/subtitles`,{method:'POST',body:fd});const j=await r.json();alert('Imported '+j.count+' transcript segments. Re-run analysis to use them for selection.');await edit({op:'reprepare',id:CUR,params:{}})}
-function drawCanvas(){const c=clip(),wrap=$('capcanvas'),txt=$('captext');if(!wrap||!txt)return;const d=CAPDRAFT||{};const q=c&&c.cues&&c.cues.find(x=>!x.deleted);txt.textContent=q?(q.text||'Caption'):'Caption';txt.style.left=(clamp(+d.pos_x||.5,0,1)*100)+'%';txt.style.top=(clamp(+d.pos_y||.8,0,1)*100)+'%';txt.style.fontSize=Math.max(8,(+(d.size||.045))*480)+'px';txt.style.color=d.color||'#fff';txt.style.fontWeight=d.bold?'700':'400';txt.style.fontFamily=d.font?JSON.stringify(d.font)+',sans-serif':'';txt.style.textAlign=d.align||'center';txt.style.transform=d.align==='left'?'translate(0,-50%)':d.align==='right'?'translate(-100%,-50%)':'translate(-50%,-50%)';$('capcanvas').style.setProperty('--safe-top',safeArea().top*100+'%');$('capcanvas').style.setProperty('--safe-bottom',safeArea().bottom*100+'%');fmtHint()}
-$('capcanvas')?.addEventListener('pointerdown',e=>{if(e.target.id!=='captext'||!CAPDRAFT)return;const r=$('capcanvas').getBoundingClientRect();CAPDRAG={r};e.target.setPointerCapture?.(e.pointerId)});$('capcanvas')?.addEventListener('pointermove',e=>{if(!CAPDRAG||!CAPDRAFT)return;const r=CAPDRAG.r;CAPDRAFT.pos_x=clamp((e.clientX-r.left)/r.width,0,1);CAPDRAFT.pos_y=clamp((e.clientY-r.top)/r.height,0,1);$('cposx').value=CAPDRAFT.pos_x.toFixed(2);$('cpos').value=CAPDRAFT.pos_y.toFixed(2);$('capnote').textContent='Unsaved caption changes';drawCanvas()});$('capcanvas')?.addEventListener('pointerup',()=>CAPDRAG=null);
+function drawCanvas(){const c=clip(),wrap=$('capcanvas'),txt=$('captext');if(!wrap||!txt)return;const d=CAPDRAFT||{};const q=c&&c.cues&&c.cues.find(x=>!x.deleted);txt.textContent=q?(q.text||'Caption'):'Caption';txt.style.left=(clamp(+d.pos_x||.5,0,1)*100)+'%';txt.style.top=(clamp(+d.pos_y||.8,0,1)*100)+'%';txt.style.fontSize=Math.max(8,(+(d.size||.045))*480)+'px';txt.style.color=d.color||'#fff';txt.style.fontWeight=d.bold?'700':'400';txt.style.fontFamily=d.font?JSON.stringify(d.font)+',sans-serif':'';txt.style.textAlign=d.align||'center';txt.style.transform=d.align==='left'?'translate(0,-50%)':d.align==='right'?'translate(-100%,-50%)':'translate(-50%,-50%)';$('capcanvas').style.setProperty('--safe-top',safeArea().top*100+'%');$('capcanvas').style.setProperty('--safe-bottom',safeArea().bottom*100+'\%');fmtHint()}$('capcanvas')?.addEventListener('pointerdown',e=>{if(e.target.id!=='captext'||!CAPDRAFT)return;const r=$('capcanvas').getBoundingClientRect();CAPDRAG={r};e.target.setPointerCapture?.(e.pointerId)});$('capcanvas')?.addEventListener('pointermove',e=>{if(!CAPDRAG||!CAPDRAFT)return;const r=CAPDRAG.r;CAPDRAFT.pos_x=clamp((e.clientX-r.left)/r.width,0,1);CAPDRAFT.pos_y=clamp((e.clientY-r.top)/r.height,0,1);$('cposx').value=CAPDRAFT.pos_x.toFixed(2);$('cpos').value=CAPDRAFT.pos_y.toFixed(2);$('capnote').textContent='Unsaved caption changes';drawCanvas()});$('capcanvas')?.addEventListener('pointerup',()=>CAPDRAG=null);
 function fontOpts(names,cur){const l=names.slice();if(cur&&!l.includes(cur))l.push(cur);return l.map(n=>`<option value="${esc(n)}" style="font-family:${esc(JSON.stringify(n))}">${esc(n)}${names.includes(n)?'':' (not installed)'}</option>`).join('')}
 function setFontSel(id,names,cur){const e=$(id);if(!e)return;e.innerHTML=fontOpts(names,cur);e.value=cur||names[0]||'Poppins'}
 let FONTNAMES=[];
 async function loadFonts(){try{const [f,files]=await Promise.all([api('/api/fonts',undefined),api('/api/fonts/files',undefined)]);FONTNAMES=f;
- setFontSel('cfont',f,(CAPDRAFT&&CAPDRAFT.font)||$('cfont').value);setFontSel('tfont',f,(topLayer()&&topLayer().font)||$('tfont').value);
+ setFontSel('cfont',f,(CAPDRAFT&&CAPDRAFT.font)||$('cfont').value);setFontSel('tfont',f,(topLayer()&&topLayer().font)\vert{}\vert{}$('tfont').value);
  let st=document.getElementById('local-fonts');if(!st){st=document.createElement('style');st.id='local-fonts';document.head.appendChild(st)}st.textContent=(files||[]).map(x=>`@font-face{font-family:${JSON.stringify(x.family)};src:url(${JSON.stringify(x.url)}) format('truetype');font-display:swap}`).join('\n')}catch(e){}}
 async function upFont(inp){if(!inp.files[0])return;const fd=new FormData();fd.append('file',inp.files[0]);const r=await fetch('/api/fonts/upload',{method:'POST',body:fd});const j=await r.json();if(!r.ok)return alert(j.error);await loadFonts()}
 // ---------- SFX / export
 function drawSfx(){const c=clip(),tl=$('tl');if(!c){tl.innerHTML='';$('sfxl').innerHTML='';return}const D=c.out_duration||1;tl.innerHTML=(c.sfx||[]).map((e,i)=>`<div class="mk ${e.enabled?'':'off'}" style="left:${Math.min(96,e.t/D*100)}%" onmousedown="drag(event,${i},${D})" title="${esc(e.sound)} @ ${e.t}s">${esc(e.sound.replace('.wav',''))}</div>`).join('');$('sfxl').innerHTML=(c.sfx||[]).map((e,i)=>`<div class="row fit small"><input type="checkbox" ${e.enabled?'checked':''} onchange="sfxp(${i},{enabled:this.checked})"><b style="min-width:80px">${esc(e.sound.replace('.wav',''))}</b>t<input type="number" step="0.05" value="${e.t}" style="width:62px" onchange="sfxp(${i},{t:+this.value})">gain<input type="number" value="${e.gain_db}" style="width:54px" onchange="sfxp(${i},{gain_db:+this.value})">dB fade out<input type="number" step="0.05" value="${e.fade_out}" style="width:54px" onchange="sfxp(${i},{fade_out:+this.value})"><label><input type="checkbox" ${e.duck?'checked':''} onchange="sfxp(${i},{duck:this.checked})">duck</label><button onclick="sfxdup(${i})">⧉</button><button class="bad" onclick="sfxdel(${i})">×</button></div>`).join('')}
-function sfxp(i,pt){const c=clip();const s=(c.sfx||[]).map(x=>({...x}));Object.assign(s[i],pt);patch(c.id,{sfx:s})}const sfxdel=i=>{const c=clip();patch(c.id,{sfx:c.sfx.filter((_,j)=>j!==i)})};const sfxdup=i=>{const c=clip();patch(c.id,{sfx:[...c.sfx,{...c.sfx[i],id:'d'+Math.random().toString(36).slice(2,8),t:c.sfx[i].t+0.4}]})};async function addSfx(){const c=clip();if(!c)return;const v=$('vid');let t=PV.mode==='edited'?v.currentTime:(outT(c,v.currentTime)||0);const e=await api('/api/sfx/new',{sound:$('sfxsel').value,t});patch(c.id,{sfx:[...(c.sfx||[]),e]})}function drag(ev,i,D){const tl=$('tl'),r=tl.getBoundingClientRect();const mv=e=>{const t=Math.max(0,Math.min(D,(e.clientX-r.left)/r.width*D));ev.target.style.left=(t/D*100)+'%';ev.target._t=t};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);if(ev.target._t!==undefined)sfxp(i,{t:+ev.target._t.toFixed(2)})};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}const pre=()=>{const a=new Audio('/api/sfx/file/'+$('sfxsel').value);a.play()};async function importSfx(inp){const fd=new FormData();fd.append('file',inp.files[0]);await fetch('/api/sfx/import',{method:'POST',body:fd});LIB=await api('/api/sfx');$('sfxsel').innerHTML=LIB.map(s=>`<option value="${esc(s.id)}">${esc(s.category)} · ${esc(s.name)}</option>`).join('');$('sfxsel').value=inp.files[0].name}
+function sfxp(i,pt){const c=clip();const s=(c.sfx||[]).map(x=>({...x}));Object.assign(s[i],pt);patch(c.id,{sfx:s})}const sfxdel=i=>{const c=clip();patch(c.id,{sfx:c.sfx.filter((_,j)=>j!==i)})};const sfxdup=i=>{const c=clip();patch(c.id,{sfx:[...c.sfx,{...c.sfx[i],id:'d'+Math.random().toString(36).slice(2,8),t:c.sfx[i].t+0.4}]})};async function addSfx(){const c=clip();if(!c)return;const v=$('vid');let t=PV.mode==='edited'?v.currentTime:(outT(c,v.currentTime)||0);const e=await api('/api/sfx/new',{sound:$('sfxsel').value,t});patch(c.id,{sfx:[...(c.sfx\vert{}\vert{}[]),e]})}function drag(ev,i,D){const tl=$('tl'),r=tl.getBoundingClientRect();const mv=e=>{const t=Math.max(0,Math.min(D,(e.clientX-r.left)/r.width*D));ev.target.style.left=(t/D*100)+'%';ev.target._t=t};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);if(ev.target._t!==undefined)sfxp(i,{t:+ev.target._t.toFixed(2)})};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}const pre=()=>{const a=new Audio('/api/sfx/file/'+$('sfxsel').value);a.play()};async function importSfx(inp){const fd=new FormData();fd.append('file',inp.files[0]);await fetch('/api/sfx/import',{method:'POST',body:fd});LIB=await api('/api/sfx');$('sfxsel').innerHTML=LIB.map(s=>`<option value="${esc(s.id)}">${esc(s.category)} · ${esc(s.name)}</option>`).join('');$('sfxsel').value=inp.files[0].name}
 const cancelJob=()=>JOB&&api('/api/jobs/'+JOB+'/cancel',{});async function drawExportState(){if(!P)return;const st=await api(`/api/project/${P.id}/export_state`,undefined);const c=clip();$('xstate').innerHTML=c&&st[c.id]?(st[c.id].last_export_fp===null?'No export yet for this clip':st[c.id].last_export_fp===st[c.id].fp?'<span style="color:var(--ok)">Export current</span>':'<span class="warn">Export outdated (edits since last export)</span>'):'';$('hist').innerHTML=(P.export_history||[]).slice().reverse().map(r=>`<div>${new Date(r.ts*1000).toLocaleString()} · ${esc(r.clip.toUpperCase())} · ${esc(r.rendered)} · <a href="${esc(r.url)}" target="_blank" style="color:var(--a)">open</a></div>`).join('')||'none yet'}
 async function renderSel(previewFlag){if(!P)return;let ids=previewFlag?[CUR]:P.clips.filter(c=>c.status==='accepted').map(c=>c.id);if(!ids.length||!ids[0])return alert(previewFlag?'Select a clip.':'Accept at least one clip first.');const options={preset:previewFlag?'preview':$('xpre').value,codec:$('xcod').value,quality:$('xq').value,hardware:$('xhw').checked,denoise:$('xden').checked,loudnorm:$('xln').checked,interpolate:$('xint').checked};$('results').innerHTML='';const j=await api(`/api/project/${P.id}/render`,{clips:ids,options});watch(j.id,async s=>{const pr=await api('/api/project/'+P.id,undefined);P=pr;if(s.status==='cancelled'){$('results').innerHTML='<div class="res err">Export cancelled.</div>';return}const fk=P.template&&P.template.format?P.template.format:(SYS.default_format||'format3');
  const card=r=>{if(r.error)return `<div class="res err"><b>${esc(r.clip.toUpperCase())}</b> export FAILED<pre>${esc(r.error)}</pre></div>`;
@@ -127,7 +148,7 @@ document.addEventListener('keydown',e=>{const m=$('fmtmodal');if(!m||m.hidden)re
  if(e.key==='Enter'&&e.target.matches&&e.target.matches('input[name=vfmt]')){e.preventDefault();applyFormat();return}
  if(e.key==='Tab'){const f=[...m.querySelectorAll('input[name=vfmt]:checked,button:not(:disabled)')];if(!f.length)return;const a=f[0],z=f[f.length-1];
   if(!m.contains(document.activeElement)){e.preventDefault();a.focus()}else if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus()}else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus()}}});
-function fmtBusy(on,t1,t2,pct){const o=$('fmtbusy');o.hidden=!on;if(!on)return;if(t1!==undefined)$('fmtb1').textContent=t1;if(t2!==undefined)$('fmtb2').textContent=t2;$('fmtbar').style.width=(pct||0)+'%';$('fmtbx').disabled=false}
+function fmtBusy(on,t1,t2,pct){const o=$('fmtbusy');o.hidden=!on;if(!on)return;if(t1!==undefined)$('fmtb1').textContent=t1;if(t2!==undefined)$('fmtb2').textContent=t2;$('fmtbar').style.width=(pct\vert{}\vert{}0)+'\%';$('fmtbx').disabled=false}
 function cancelFormatApply(){FMTUI.aborted=true;$('fmtbx').disabled=true;$('fmtb2').textContent='Cancelling…';if(FMTUI.job)api('/api/jobs/'+FMTUI.job+'/cancel',{}).catch(()=>{})}
 async function fmtPrerender(cid,next){ // render the edited preview AS IF `next` were applied, without saving anything: proves it works before we commit
  const r=await api(`/api/project/${P.id}/preview`,{clip:cid,format:next});if(r.state==='ready')return;FMTUI.job=r.job;
@@ -149,3 +170,172 @@ async function applyFormat(){
  }finally{FMTUI.busy=false;FMTUI.job=null;fmtBusy(false);fmtSync()}}
 
 boot();
+
+// --- STAGE 1: CAPCUT-STYLE TIMELINE ---
+let TL = { zoom: 100, sel: null, drag: null, dur: 0 };
+
+function updateTLToolbar() {
+    $('tl-split').disabled = !TL.sel;
+    $('tl-del').disabled = !TL.sel;
+}
+
+function updateTL() {
+    const c = clip(); if (!c) return;
+    TL.dur = c.out_duration || 0;
+    $('tl-container').style.width = Math.max(800, TL.dur * TL.zoom + 200) + 'px';
+    
+    const mk = (id, type, start, dur, label, noHandle) => {
+        const isSel = TL.sel && TL.sel.type === type && TL.sel.id === id;
+        return `<div class="tl-block ${isSel ? 'sel' : ''}" data-type="${type}" data-id="${id}" style="left: ${start * TL.zoom}px; width: ${Math.max(2, dur * TL.zoom)}px;">
+            ${noHandle ? '' : '<div class="tl-handle left" data-action="edge-l"></div>'}
+            <div class="tl-content" data-action="move">${esc(label)}</div>
+            ${noHandle ? '' : '<div class="tl-handle right" data-action="edge-r"></div>'}
+        </div>`;
+    };
+
+    let htmlKeep = '', tKeep = 0;
+    (c.keep || []).forEach((k, i) => {
+        const w = k[1] - k[0];
+        htmlKeep += mk(i, 'keep', tKeep, w, `Video ${i+1}`);
+        tKeep += w;
+    });
+    $('tl-tracks').querySelector('[data-type="keep"]').innerHTML = htmlKeep;
+
+    $('tl-tracks').querySelector('[data-type="cues"]').innerHTML = (c.cues || []).map((q, i) => 
+        q.deleted ? '' : mk(i, 'cues', q.start, q.end - q.start, q.text)
+    ).join('');
+
+    $('tl-tracks').querySelector('[data-type="top"]').innerHTML = TOPDRAFT.map((q, i) => 
+        mk(i, 'top', q.start || 0, (q.end !== undefined ? q.end : TL.dur) - (q.start || 0), q.text || 'Text')
+    ).join('');
+
+    $('tl-tracks').querySelector('[data-type="sfx"]').innerHTML = (c.sfx || []).map((s, i) => 
+        mk(i, 'sfx', s.t, 2, s.sound.replace('.wav',''), true)
+    ).join('');
+}
+
+$('tl-tracks')?.addEventListener('pointerdown', e => {
+    if (e.target.closest('.tl-block')) {
+        const block = e.target.closest('.tl-block');
+        TL.sel = { type: block.dataset.type, id: parseInt(block.dataset.id) };
+        updateTLToolbar(); updateTL();
+        const action = e.target.dataset.action;
+        if (!action) return;
+        TL.drag = { action, block, type: TL.sel.type, id: TL.sel.id, startX: e.clientX, startLeft: parseFloat(block.style.left), startWidth: parseFloat(block.style.width) };
+        e.target.setPointerCapture(e.pointerId);
+    } else {
+        TL.sel = null; updateTLToolbar(); updateTL();
+    }
+});
+
+$('tl-tracks')?.addEventListener('pointermove', e => {
+    if (!TL.drag) return;
+    const dx = e.clientX - TL.drag.startX;
+    const { action, block, startLeft, startWidth } = TL.drag;
+    if (action === 'move') {
+        block.style.left = Math.max(0, startLeft + dx) + 'px';
+    } else if (action === 'edge-l') {
+        const newLeft = Math.max(0, Math.min(startLeft + startWidth - 5, startLeft + dx));
+        block.style.left = newLeft + 'px';
+        block.style.width = Math.max(2, startWidth - (newLeft - startLeft)) + 'px';
+    } else if (action === 'edge-r') {
+        block.style.width = Math.max(5, startWidth + dx) + 'px';
+    }
+});
+
+$('tl-tracks')?.addEventListener('pointerup', async e => {
+    if (!TL.drag) return;
+    const { type, id, action, startLeft, startWidth } = TL.drag;
+    const newStart = parseFloat(TL.drag.block.style.left) / TL.zoom;
+    const newDur = parseFloat(TL.drag.block.style.width) / TL.zoom;
+    const c = clip(); TL.drag = null; if (!c) return;
+
+    if (type === 'keep') {
+        let k = [...c.keep];
+        if (action === 'move') { // Reorder kept regions
+            const center = newStart + newDur / 2;
+            let tK = 0, tgt = 0;
+            for (let i = 0; i < k.length; i++) { if (i !== id) { tK += k[i][1] - k[i][0]; if (center > tK) tgt = i + 1; } }
+            const moved = k.splice(id, 1)[0]; if (tgt > id) tgt--; k.splice(tgt, 0, moved); TL.sel.id = tgt;
+        } else if (action === 'edge-l') {
+            k[id][0] = Math.max(0, k[id][0] + (newStart - (startLeft / TL.zoom)));
+        } else if (action === 'edge-r') {
+            k[id][1] = Math.max(k[id][0] + 0.1, k[id][1] + (newDur - (startWidth / TL.zoom)));
+        }
+        await patch(c.id, { keep: k, locked: true });
+    } else if (type === 'cues') {
+        let cues = [...c.cues]; cues[id].start = Math.max(0, newStart); cues[id].end = cues[id].start + newDur; cues[id].words_status = 'stale';
+        await patch(c.id, { cues, locked_cues: true });
+    } else if (type === 'top') {
+        TOPDRAFT[id].start = Math.max(0, newStart); TOPDRAFT[id].end = TOPDRAFT[id].start + newDur;
+        await applyTop();
+    } else if (type === 'sfx') {
+        let sfx = [...c.sfx]; sfx[id].t = Math.max(0, newStart);
+        await patch(c.id, { sfx });
+    }
+});
+
+async function tlSplit() {
+    if (!TL.sel) return;
+    const c = clip(); if (!c) return;
+    const t = $('vid').currentTime; const { type, id } = TL.sel;
+    if (type === 'keep') {
+        let tK = 0, k = [...c.keep];
+        for (let i = 0; i < k.length; i++) {
+            const w = k[i][1] - k[i][0];
+            if (i === id && t > tK && t < tK + w) {
+                const splitSource = k[i][0] + (t - tK); const oldE = k[i][1]; k[i][1] = splitSource; k.splice(i + 1, 0, [splitSource, oldE]);
+                await patch(c.id, { keep: k, locked: true }); TL.sel.id = i + 1; return;
+            }
+            tK += w;
+        }
+    } else if (type === 'cues') {
+        let cues = [...c.cues]; const q = cues[id];
+        if (t > q.start && t < q.end) { const q2 = JSON.parse(JSON.stringify(q)); q.end = t; q2.start = t; cues.splice(id + 1, 0, q2); await patch(c.id, { cues, locked_cues: true }); TL.sel.id = id + 1; }
+    } else if (type === 'top') {
+        const q = TOPDRAFT[id], start = q.start || 0, end = q.end !== undefined ? q.end : TL.dur;
+        if (t > start && t < end) { const q2 = JSON.parse(JSON.stringify(q)); q.end = t; q2.id = 'top' + Date.now().toString(36); q2.start = t; TOPDRAFT.splice(id + 1, 0, q2); await applyTop(); TL.sel.id = id + 1; }
+    }
+}
+
+async function tlDelete() {
+    if (!TL.sel) return;
+    const c = clip(); if (!c) return; const { type, id } = TL.sel; TL.sel = null; updateTLToolbar();
+    if (type === 'keep') {
+        let k = [...c.keep]; if (k.length > 1) { k.splice(id, 1); await patch(c.id, { keep: k, locked: true }); } else alert("Cannot delete the last video segment.");
+    } else if (type === 'cues') {
+        let cues = [...c.cues]; cues[id].deleted = true; await patch(c.id, { cues, locked_cues: true });
+    } else if (type === 'top') {
+        TOPDRAFT.splice(id, 1); await applyTop();
+    } else if (type === 'sfx') {
+        let sfx = [...c.sfx]; sfx.splice(id, 1); await patch(c.id, { sfx });
+    }
+}
+
+$('tl-zoom')?.addEventListener('input', function() { TL.zoom = parseInt(this.value); updateTL(); tlSync(); });$('tl-ruler')?.addEventListener('pointerdown', e => { const rect = $('tl-tracks').getBoundingClientRect();$('vid').currentTime = Math.max(0, (e.clientX - rect.left + $('tl-scroll').scrollLeft) / TL.zoom); });$('tl-play')?.addEventListener('click', togglePlay);
+$('tl-split')?.addEventListener('click', tlSplit);$('tl-del')?.addEventListener('click', tlDelete);
+
+function tlSync() {
+    const v = $('vid');
+    if (TL.dur > 0 && v) {
+        const px = v.currentTime * TL.zoom; $('tl-playhead').style.left = px + 'px';
+        if (!v.paused) {
+            const scr = $('tl-scroll'); if (px < scr.scrollLeft \vert{}\vert{} px > scr.scrollLeft + scr.clientWidth - 50) scr.scrollLeft = Math.max(0, px - scr.clientWidth / 2); } } }$('vid')?.addEventListener('timeupdate', tlSync);
+$('vid')?.addEventListener('play', () =>$('tl-play').textContent = '⏸ Pause');
+$('vid')?.addEventListener('pause', () =>$('tl-play').textContent = '▶ Play');
+
+// Intercept loads to re-render the timeline
+const origLoad = load; load = function(p) { origLoad(p); if (!$('editing').hidden) updateTL(); };
+const origSelClip = selClip; selClip = function(id) { origSelClip(id); if (!$('editing').hidden) updateTL(); };
+
+document.addEventListener('keydown', e => {
+    if (!$('editing').hidden) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.code === 'Space') { e.preventDefault(); togglePlay(); } 
+        else if (e.code === 'KeyS' || e.key === 's') { e.preventDefault(); tlSplit(); } 
+        else if (e.code === 'Delete' || e.code === 'Backspace') { e.preventDefault(); tlDelete(); } 
+        else if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey) && !e.shiftKey) { e.preventDefault(); undo('undo'); setTimeout(updateTL, 250); } 
+        else if (e.code === 'KeyY' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo('redo'); setTimeout(updateTL, 250); } 
+        else if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey) && e.shiftKey) { e.preventDefault(); undo('redo'); setTimeout(updateTL, 250); }
+    }
+});
