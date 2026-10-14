@@ -7,7 +7,7 @@ header{display:flex;gap:12px;align-items:center;padding:10px 16px;border-bottom:
 h1{font-size:15px;margin:0 12px 0 0}h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--m)}
 .tabs{display:flex;gap:4px}.tabs button{background:var(--p2);border:1px solid var(--b);color:var(--m);padding:7px 20px;cursor:pointer;font-weight:600;border-radius:6px}.tabs button.on{background:var(--a);border-color:var(--a);color:#fff}
 .tog{min-width:54px;font-weight:700;background:var(--p2);color:var(--m)}.tog.on{background:var(--ok);border-color:var(--ok);color:#06210f}
-#editing{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);text-align:center}#editing[hidden],main[hidden]{display:none}#editing h2{font-size:34px;margin:0 0 6px}#editing p{font-size:20px;color:var(--m);margin:0}
+#editing[hidden],main[hidden]{display:none}
 #capcard .row{flex-wrap:wrap}#cfadewrap{display:inline-flex;gap:8px;align-items:center}.res pre{white-space:pre-wrap;margin:4px 0 0;font-size:11px;max-height:180px;overflow:auto;background:#090a0d;padding:6px;border-radius:6px}.chk{font-size:11px;color:var(--m)}.chk b.ok{color:var(--ok)}.chk b.no{color:var(--bad)}
 main{display:grid;grid-template-columns:300px minmax(380px,1fr) 400px;gap:12px;padding:12px;align-items:start}
 .card{background:var(--p);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:12px}
@@ -44,10 +44,66 @@ details{margin:6px 0}summary{cursor:pointer;color:var(--m)}pre#log{background:#0
 .capcanvas .zone{position:absolute;border:1px dashed rgba(255,255,255,.35);border-radius:6px;pointer-events:none}.safe.zone{background:transparent;border-color:rgba(255,255,255,.65);color:#fff}
 @media(max-width:760px){.fgrid{grid-template-columns:1fr;gap:10px}.fcard{flex-direction:row;align-items:flex-start}.ftx{padding-right:30px}.fimg{height:150px;margin:0;flex:0 0 auto}.mhd,.mbd,.mft{padding-left:14px;padding-right:14px}}
 @media(max-width:1000px){main{grid-template-columns:1fr;padding:8px}.phone{width:min(270px,80vw)}header{flex-wrap:wrap}.clip{grid-template-columns:72px 1fr}.clip img{width:72px}.row{flex-wrap:wrap}.cue{grid-template-columns:48px 48px 1fr 22px}}
+
+/* --- Stage 1 Timeline CSS --- */
+#editing { padding: 12px; height: calc(100vh - 60px); display: flex; flex-direction: column; gap: 12px; }
+.ed-top { display: flex; gap: 20px; height: 45vh; min-height: 400px; justify-content: center; }
+.ed-player-wrap { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; min-width: 270px; }
+.ed-inspector { flex: 1; background: var(--p); border: 1px solid var(--b); border-radius: 8px; padding: 12px; overflow-y: auto; max-width: 400px; }
+.tl-panel { flex: 1; display: flex; flex-direction: column; background: var(--p); border: 1px solid var(--b); border-radius: 8px; overflow: hidden; min-height: 250px; }
+.tl-toolbar { padding: 8px 12px; background: var(--p2); border-bottom: 1px solid var(--b); display: flex; gap: 8px; align-items: center; }
+.tl-scroll { flex: 1; overflow: auto; position: relative; background: var(--bg); }
+.tl-container { position: relative; min-height: 100%; padding-bottom: 20px; }
+.tl-ruler { height: 24px; background: var(--p2); border-bottom: 1px solid var(--b); position: sticky; top: 0; z-index: 4; cursor: text; }
+.tl-tracks { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; }
+.tl-row { height: 34px; position: relative; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); }
+.tl-row::before { content: attr(data-label); position: sticky; left: 6px; top: 0; line-height: 34px; font-size: 10px; color: var(--m); font-weight: bold; text-transform: uppercase; pointer-events: none; z-index: 3; mix-blend-mode: exclusion; }
+.tl-block { position: absolute; top: 2px; bottom: 2px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; overflow: hidden; cursor: grab; user-select: none; box-shadow: 0 1px 3px rgba(0,0,0,0.5); white-space: nowrap; }
+.tl-block.sel { outline: 2px solid #fff; outline-offset: 1px; z-index: 2; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
+.tl-handle { position: absolute; top: 0; bottom: 0; width: 10px; background: rgba(255,255,255,0.3); cursor: col-resize; z-index: 2; opacity: 0; transition: opacity 0.2s; }
+.tl-block:hover .tl-handle { opacity: 1; }
+.tl-handle.left { left: 0; }
+.tl-handle.right { right: 0; }
+.tl-content { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; padding: 0 12px; pointer-events: none; }
+.tl-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--w); z-index: 5; pointer-events: none; }
+.tl-playhead::before { content: ''; position: absolute; top: 0; left: -5px; border-style: solid; border-width: 10px 6px 0 6px; border-color: var(--w) transparent transparent transparent; }
+.tl-row[data-type="keep"] .tl-block { background: var(--ok); color: #06210f; }
+.tl-row[data-type="cues"] .tl-block { background: var(--a); color: #fff; }
+.tl-row[data-type="top"] .tl-block { background: var(--m); color: #fff; }
+.tl-row[data-type="sfx"] .tl-block { background: var(--w); color: #201400; }
 </style></head><body>
 <header><h1>ClipForge</h1><div class="tabs" id="tabs" role="tablist"><button id="tab-clips" class="on" role="tab" aria-selected="true" onclick="showTab('clips')">Auto Clips</button><button id="tab-editing" role="tab" aria-selected="false" onclick="showTab('editing')">Editing</button></div><span style="flex:1"></span><span class="small" id="sys"></span>
 <span id="projtools" style="display:flex;gap:8px;align-items:center"><button id="saveproj" class="ok" onclick="saveProject()">Save Project</button><button id="undo" onclick="undo('undo')">↶ Undo</button><button id="redo" onclick="undo('redo')">↷ Redo</button><span class="small" id="saved"></span></span></header>
-<section id="editing" hidden role="tabpanel" aria-labelledby="tab-editing"><div><h2>Editing</h2><p>Coming Soon</p></div></section>
+
+<section id="editing" hidden role="tabpanel" aria-labelledby="tab-editing">
+    <div class="ed-top">
+        <div id="ed-player-wrap" class="ed-player-wrap"></div>
+        <div class="ed-inspector" id="ed-inspector">
+            <p class="small" style="color:var(--m)">Select a block on the timeline to edit properties.</p>
+        </div>
+    </div>
+    <div class="tl-panel">
+        <div class="tl-toolbar">
+            <button id="tl-play" class="pri">▶ Play</button>
+            <button id="tl-split" disabled title="Split selected block at playhead (S)">Split</button>
+            <button id="tl-del" class="bad" disabled title="Delete selected block (Del)">Delete</button>
+            <label style="margin-left:auto; font-size:11px; display:flex; align-items:center; gap:6px">Zoom <input type="range" id="tl-zoom" min="20" max="400" value="100" style="width:100px"></label>
+        </div>
+        <div class="tl-scroll" id="tl-scroll">
+            <div class="tl-container" id="tl-container">
+                <div class="tl-ruler" id="tl-ruler"></div>
+                <div class="tl-playhead" id="tl-playhead"></div>
+                <div class="tl-tracks" id="tl-tracks">
+                    <div class="tl-row" data-type="keep" data-label="Video"></div>
+                    <div class="tl-row" data-type="cues" data-label="Caption"></div>
+                    <div class="tl-row" data-type="top" data-label="Text"></div>
+                    <div class="tl-row" data-type="sfx" data-label="SFX"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <main id="autoclips" role="tabpanel" aria-labelledby="tab-clips">
 <section>
  <div class="card"><h3>1 · Source video</h3>
