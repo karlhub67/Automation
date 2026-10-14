@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# ClipForge runtime data (created automatically on first start; contains personal projects/media)
+workspace/
+
+# Media and build output
+*.mp4
+*.mov
+*.mkv
+*.wav
+*.mp3
+*.srt.bak
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Secrets
+.env
+*.pem
+*.key

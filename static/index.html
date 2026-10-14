@@ -1,0 +1,136 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ClipForge - AI Auto-Clipping</title>
+<style>
+:root{--bg:#0f1115;--p:#171a21;--p2:#1f232c;--b:#2c313d;--t:#e8eaf0;--m:#8d94a5;--a:#6c8cff;--ok:#3ecf8e;--bad:#ff6b6b;--w:#ffb454}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:13px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+header{display:flex;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--b);background:var(--p);position:sticky;top:0;z-index:5}
+h1{font-size:15px;margin:0 12px 0 0}h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--m)}
+.tabs{display:flex;gap:4px}.tabs button{background:var(--p2);border:1px solid var(--b);color:var(--m);padding:7px 20px;cursor:pointer;font-weight:600;border-radius:6px}.tabs button.on{background:var(--a);border-color:var(--a);color:#fff}
+.tog{min-width:54px;font-weight:700;background:var(--p2);color:var(--m)}.tog.on{background:var(--ok);border-color:var(--ok);color:#06210f}
+#editing{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);text-align:center}#editing[hidden],main[hidden]{display:none}#editing h2{font-size:34px;margin:0 0 6px}#editing p{font-size:20px;color:var(--m);margin:0}
+#capcard .row{flex-wrap:wrap}#cfadewrap{display:inline-flex;gap:8px;align-items:center}.res pre{white-space:pre-wrap;margin:4px 0 0;font-size:11px;max-height:180px;overflow:auto;background:#090a0d;padding:6px;border-radius:6px}.chk{font-size:11px;color:var(--m)}.chk b.ok{color:var(--ok)}.chk b.no{color:var(--bad)}
+main{display:grid;grid-template-columns:300px minmax(380px,1fr) 400px;gap:12px;padding:12px;align-items:start}
+.card{background:var(--p);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:12px}
+input,select,textarea,button{font:inherit;color:var(--t);background:var(--p2);border:1px solid var(--b);border-radius:6px;padding:6px 8px}
+input[type=checkbox]{padding:0}input[type=color]{padding:0;height:26px;width:40px}textarea{width:100%;resize:vertical}input[type=text],input[type=number],select{width:100%}
+button{cursor:pointer}button.pri{background:var(--a);border-color:var(--a);color:#fff;font-weight:600}button.ok{background:var(--ok);border-color:var(--ok);color:#06210f}button.bad{color:var(--bad)}button:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0}.row>*{flex:1}.row label{flex:0 0 auto;color:var(--m);min-width:70px}.row.fit>*{flex:0 0 auto}
+.stages{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}.st{padding:2px 8px;border-radius:10px;background:var(--p2);color:var(--m);font-size:11px}.st.on{background:var(--a);color:#fff}.st.done{background:#25402f;color:var(--ok)}
+.bar{height:6px;background:var(--p2);border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;background:var(--a);width:0;transition:width .3s}
+.clip{display:grid;grid-template-columns:96px 1fr;gap:10px;border:1px solid var(--b);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--p2)}.clip.sel{border-color:var(--a)}.clip.rej{opacity:.45}
+.clip img{width:96px;border-radius:4px;background:#000;display:block}.tag{font-size:11px;padding:1px 6px;border-radius:8px;background:var(--b);color:var(--m)}.tag.acc{background:#25402f;color:var(--ok)}.tag.rej{background:#402525;color:var(--bad)}
+.why{background:var(--bg);border-radius:6px;padding:8px;margin-top:6px;font-size:12px;color:#c3c8d6}.why li{margin:2px 0}.bd{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}.bd span{font-size:11px;color:var(--m)}.bd b{color:var(--t)}
+.phone{width:270px;height:480px;background:#000;border:2px solid var(--b);border-radius:14px;margin:0 auto;position:relative;overflow:hidden}.phone video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}.phone .safe,.phone .capl{position:absolute}
+.phone img.ov{inset:0;width:100%;height:100%;pointer-events:none}.capcanvas{width:270px;aspect-ratio:9/16;margin:8px auto;background:linear-gradient(180deg,#2b2f3a,#151820);border:1px solid var(--b);border-radius:10px;position:relative;overflow:hidden;touch-action:none}.capcanvas .guide{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,180,84,.55);pointer-events:none}.capcanvas .guide.top{top:var(--safe-top)}.capcanvas .guide.bottom{bottom:var(--safe-bottom)}.capcanvas .videohint{position:absolute;left:0;right:0;top:25%;height:50%;border:1px dashed rgba(255,255,255,.16);background:rgba(0,0,0,.15)}.capcanvas #captext{position:absolute;max-width:88%;transform-origin:center;cursor:grab;user-select:none;text-shadow:0 1px 3px #000,0 0 4px #000;white-space:pre-wrap}.toplayers{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}.toplayers button.on{background:var(--a);color:#fff}.topempty{padding:6px;background:var(--bg);border-radius:6px;color:var(--m)}.safe{background:rgba(255,80,80,.18);border:1px dashed rgba(255,80,80,.6);pointer-events:none;font-size:9px;color:#ff9a9a}
+.pvtrack{position:relative;height:10px;margin:3px 0 1px;background:var(--p2);border-radius:6px;overflow:hidden}.pvmarkers{position:absolute;inset:0}.pvmark{position:absolute;top:2px;height:6px;border-radius:3px}.pvmark.cue{background:var(--a);opacity:.8}.pvmark.keep{top:0;height:10px;background:rgba(85,180,120,.14);border-left:1px solid rgba(85,180,120,.3);border-right:1px solid rgba(85,180,120,.3)}.busy{position:absolute;left:0;right:0;top:6px;text-align:center;font-size:11px;background:rgba(0,0,0,.6);color:#fff;padding:2px;z-index:3}.pvmode.on,#pvm1.on,#pvm2.on{background:var(--a);color:#fff}.adv .row{margin:4px 0}
+.capl{left:6%;right:6%;text-align:center;font-weight:700;font-size:12px;text-shadow:0 1px 3px #000,0 0 4px #000;pointer-events:none}
+details{margin:6px 0}summary{cursor:pointer;color:var(--m)}pre#log{background:#090a0d;padding:8px;border-radius:6px;max-height:200px;overflow:auto;font-size:11px;white-space:pre-wrap;margin:6px 0 0}
+.tl{position:relative;height:34px;background:var(--p2);border-radius:6px;margin:6px 0}.mk{position:absolute;top:4px;height:26px;min-width:14px;background:var(--w);border-radius:4px;cursor:grab;font-size:10px;color:#201400;padding:0 3px;overflow:hidden;white-space:nowrap}.mk.off{background:#555;color:#aaa}
+.cue{display:grid;grid-template-columns:52px 52px 1fr 22px;gap:4px;margin:3px 0}.cue input{padding:3px 4px}.small{font-size:11px;color:var(--m)}.warn{color:var(--w)}.res{border-left:3px solid var(--ok);padding:4px 8px;margin:6px 0;background:var(--p2);font-size:12px}.res.err{border-color:var(--bad)}
+/* ---- Video format selector (Format button, dialog, apply overlay) ---- */
+.fmtrow{justify-content:center;margin:10px 0 8px}.fmtrow>*{flex:0 0 auto}.fmtrow button{font-weight:600;padding:6px 20px}.fmtrow .tag{max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mback{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(6,7,10,.76);backdrop-filter:blur(2px)}.mback[hidden]{display:none}
+.mdlg{background:var(--p);border:1px solid var(--b);border-radius:12px;width:min(920px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.65)}
+.mhd{padding:16px 20px 4px}.mhd h2{margin:0;font-size:18px}.mhd p{margin:4px 0 0}.mbd{padding:12px 20px;overflow:auto;min-height:0}.mft{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--b)}.mft button{min-width:96px;padding:8px 18px}
+.fgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.fwrap{display:block;cursor:pointer}.fwrap input{position:absolute;opacity:0;pointer-events:none}
+.fcard{position:relative;display:flex;flex-direction:column;gap:10px;height:100%;background:var(--p2);border:2px solid var(--b);border-radius:10px;padding:10px;transition:border-color .12s,box-shadow .12s,background .12s}
+.fwrap:hover .fcard{border-color:#46506a}.fwrap input:checked+.fcard{border-color:var(--a);background:#1d2335;box-shadow:0 0 0 3px rgba(108,140,255,.30)}.fwrap input:focus-visible+.fcard{outline:2px solid #fff;outline-offset:2px}
+.fwrap input:checked+.fcard::after{content:"\2713";position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:var(--a);color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.fimg{display:block;height:min(44vh,440px);width:auto;max-width:100%;aspect-ratio:9/16;margin:0 auto;border-radius:6px;background:#000;object-fit:cover}
+.ftx{display:flex;flex-direction:column;gap:4px;min-width:0}.fname{font-weight:700;font-size:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.fplat{color:var(--a);font-size:12px;font-weight:600}.fdesc{color:#c3c8d6;font-size:12px}.flay{color:var(--m);font-size:11px;border-top:1px dashed var(--b);padding-top:5px;margin-top:2px}
+.fbusy{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;background:rgba(8,9,12,.62);backdrop-filter:blur(1.5px)}.fbusy[hidden]{display:none}
+.fbox{width:80%;text-align:center;background:rgba(23,26,33,.97);border:1px solid var(--b);border-radius:12px;padding:16px 14px;box-shadow:0 8px 30px rgba(0,0,0,.55)}.fbox b{display:block;font-size:14px}.fbox .small{display:block;margin:3px 0 10px}.fbox .bar{margin:0 0 10px}
+.spin{width:34px;height:34px;margin:0 auto 10px;border:3px solid var(--b);border-top-color:var(--a);border-radius:50%;animation:fspin .8s linear infinite}@keyframes fspin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
+.capcanvas .zone{position:absolute;border:1px dashed rgba(255,255,255,.35);border-radius:6px;pointer-events:none}.safe.zone{background:transparent;border-color:rgba(255,255,255,.65);color:#fff}
+@media(max-width:760px){.fgrid{grid-template-columns:1fr;gap:10px}.fcard{flex-direction:row;align-items:flex-start}.ftx{padding-right:30px}.fimg{height:150px;margin:0;flex:0 0 auto}.mhd,.mbd,.mft{padding-left:14px;padding-right:14px}}
+@media(max-width:1000px){main{grid-template-columns:1fr;padding:8px}.phone{width:min(270px,80vw)}header{flex-wrap:wrap}.clip{grid-template-columns:72px 1fr}.clip img{width:72px}.row{flex-wrap:wrap}.cue{grid-template-columns:48px 48px 1fr 22px}}
+</style></head><body>
+<header><h1>ClipForge</h1><div class="tabs" id="tabs" role="tablist"><button id="tab-clips" class="on" role="tab" aria-selected="true" onclick="showTab('clips')">Auto Clips</button><button id="tab-editing" role="tab" aria-selected="false" onclick="showTab('editing')">Editing</button></div><span style="flex:1"></span><span class="small" id="sys"></span>
+<span id="projtools" style="display:flex;gap:8px;align-items:center"><button id="saveproj" class="ok" onclick="saveProject()">Save Project</button><button id="undo" onclick="undo('undo')">↶ Undo</button><button id="redo" onclick="undo('redo')">↷ Redo</button><span class="small" id="saved"></span></span></header>
+<section id="editing" hidden role="tabpanel" aria-labelledby="tab-editing"><div><h2>Editing</h2><p>Coming Soon</p></div></section>
+<main id="autoclips" role="tabpanel" aria-labelledby="tab-clips">
+<section>
+ <div class="card"><h3>1 · Source video</h3>
+  <div id="drop" style="border:1px dashed var(--b);border-radius:8px;padding:14px;text-align:center;color:var(--m)">Drop a video here or <a href="#" onclick="document.getElementById('file').click();return false">browse</a><input id="file" type="file" accept="video/*" hidden></div>
+  <div class="row"><input type="text" id="path" placeholder="…or paste a local file path (best for huge files)"><button onclick="openPath()" style="flex:0 0 auto">Open</button></div>
+  <div class="row"><label>Project name</label><input type="text" id="pname" placeholder="Project name" onchange="markProjectName()"><button onclick="saveProject()" style="flex:0 0 auto">Save</button></div>
+  <div class="small" id="meta"></div>
+  <details open><summary>Previous projects</summary><div class="row"><input type="search" id="projectsearch" placeholder="Search saved projects…" oninput="refreshProjects()"><button onclick="refreshProjects()">Refresh</button></div><div id="recent"></div></details></div>
+ <div class="card"><h3>2 · What should it find?</h3>
+  <textarea id="instr" rows="3">Choose happy moments</textarea>
+  <div class="small">e.g. “Find the funniest reactions”, “Only moments about money”, “best 20–40 second story moments”</div>
+  <div class="row"><label>Clips</label><input type="number" id="n" value="5" min="1" max="20"></div>
+  <div class="row"><label>Duration s</label><input type="number" id="dmin" value="15" title="min"><input type="number" id="dtar" value="30" title="target"><input type="number" id="dmax" value="60" title="max"></div>
+  <div class="small">min / target / max seconds</div>
+  <div class="row"><label>Dead air</label><select id="dead"><option>off</option><option>light</option><option selected>balanced</option><option>aggressive</option></select></div>
+  <div class="row"><label>ASR model</label><select id="asr"><option>tiny</option><option selected>base</option><option>small</option><option>medium</option></select></div>
+  <div class="row fit"><input type="checkbox" id="asfx"><label for="asfx" style="min-width:0">Propose SFX automatically (editable)</label></div>
+  <button class="pri" id="go" onclick="analyze()" style="width:100%;margin-top:6px">Analyze &amp; find clips</button></div>
+ <div class="card"><h3>Pipeline</h3><div class="stages" id="stages"></div><div class="bar"><i id="pb"></i></div><div class="small" id="pst" style="margin-top:4px">idle</div>
+  <details open><summary>Processing log</summary><pre id="log"></pre></details></div>
+</section>
+<section>
+ <div class="card"><div class="row fit"><h3 style="margin:0;flex:1">3 · Candidate clips</h3><button onclick="bulk('accepted')">Accept all</button><button onclick="bulk('rejected')">Reject all</button><button onclick="mergeSel()">Merge selected</button></div>
+  <div id="clips" class="small" style="margin-top:8px">No clips yet. Open a video and run the analysis.</div></div>
+ <div class="card" id="capcard" style="display:none"><h3>Transcript Captions (editable) — <span id="capid"></span></h3>
+  <div class="capcanvas" id="capcanvas"><div class="videohint"></div><div class="guide top"></div><div class="guide bottom"></div><div id="captext">Caption</div></div>
+  <div class="small">9:16 placement aid. Drag the caption directly on the canvas; final placement is rendered by FFmpeg.</div>
+  <div class="row"><label>X</label><input type="range" id="cposx" min="0.02" max="0.98" step="0.01" value="0.50" onchange="capChanged()"><label>Y</label><input type="range" id="cpos" min="0.02" max="0.98" step="0.01" value="0.80" onchange="capChanged()"><label>Size</label><input type="range" id="csize" min="0.02" max="0.07" step="0.002" value="0.045" onchange="capChanged()"></div>
+  <div class="row fit"><label>Font</label><select id="cfont" style="width:190px" onchange="capChanged()"><option>Poppins</option></select><input type="file" id="fontup" accept=".ttf,.otf" onchange="upFont(this)" style="width:96px" title="add a .ttf/.otf font"><label>Color</label><input type="color" id="ccol" value="#ffffff" onchange="capChanged()"><label>Bold</label><input type="checkbox" id="cbold" checked onchange="capChanged()"><label>Box</label><input type="checkbox" id="cbox" onchange="capChanged()"><label>Caption Fade In</label><button type="button" id="cfadeon" class="tog on" aria-pressed="true" title="ON: words fade in one by one. OFF: captions appear immediately." onclick="toggleFade()">ON</button><span id="cfadewrap"><label>Fade ms</label><input type="number" id="cfade" value="120" min="10" style="width:64px" onchange="capChanged()"></span></div>
+  <details class="adv"><summary>Advanced caption style</summary>
+   <div class="row fit"><label>Outline</label><input type="range" id="col_w" min="0" max="0.012" step="0.001" value="0.004" onchange="capChanged()"><input type="color" id="col_c" value="#000000" onchange="capChanged()"><label>Shadow</label><input type="range" id="cshad" min="0" max="0.01" step="0.001" value="0.002" onchange="capChanged()"></div>
+   <div class="row fit"><label>Align</label><select id="calign" style="width:90px" onchange="capChanged()"><option>center</option><option>left</option><option>right</option></select><label>Emphasis</label><input type="checkbox" id="cemph" checked onchange="capChanged()"><label>Emphasis color</label><input type="color" id="cemc" value="#ffd43b" onchange="capChanged()"><label>Max chars</label><input type="number" id="cmc" value="24" style="width:56px" onchange="capChanged()"><label>Max lines</label><input type="number" id="cml" value="2" style="width:50px" onchange="capChanged()"></div></details>
+  <div class="row fit"><span class="small" id="capnote"></span><button class="pri" onclick="applyCap()">Apply Changes</button><button onclick="cancelCap()">Cancel Changes</button><button onclick="resetCap()">Reset</button><button onclick="addCue()">+ Add Caption</button><button onclick="regenCues()">Regenerate from transcript</button><label class="small" style="min-width:0">Import .srt/.vtt:</label><input type="file" id="srt" accept=".srt,.vtt" onchange="importSrt(this)"></div>
+  <div id="cues" style="max-height:260px;overflow:auto"></div></div>
+</section>
+<section>
+ <div class="card"><h3>Live preview <span class="small" id="pvname"></span> <span class="tag" id="pvstat">idle</span></h3>
+  <div class="phone" id="phone"><video id="vid" playsinline preload="auto"></video><div id="pvbusy" class="busy" style="display:none">Updating preview…</div><div id="safes"></div>
+   <div id="fmtbusy" class="fbusy" hidden role="status" aria-live="polite"><div class="fbox"><div class="spin"></div><b id="fmtb1">Applying format…</b><span class="small" id="fmtb2">Updating preview…</span><div class="bar"><i id="fmtbar"></i></div><button id="fmtbx" onclick="cancelFormatApply()">Cancel</button></div></div></div>
+  <div class="row fit fmtrow"><button id="fmtbtn" onclick="openFormat()" disabled title="Choose the video format (layout) used for the preview and exports">Format</button><span class="tag" id="fmtcur" title="Format currently applied to this project"></span></div>
+  <div class="row fit" style="justify-content:center;margin-bottom:0"><button id="pvplay" class="pri" onclick="togglePlay()" disabled>▶ Play</button>
+   <input type="range" id="pvseek" min="0" max="1000" value="0" disabled style="flex:1;min-width:120px;padding:0"><span class="small" id="pvtime" style="min-width:74px">0:00.0 / 0:00.0</span></div>
+  <div class="pvtrack" title="Caption/kept-region map"><div id="pvmarkers" class="pvmarkers"></div></div>
+  <div class="row fit" style="justify-content:center"><button id="pvm1" class="on" onclick="setMode('edited')">Edited clip preview</button><button id="pvm2" onclick="setMode('ctx')">Original context (±5s, unedited)</button>
+   <button id="pvcancel" class="bad" onclick="cancelPreview()" style="display:none">Cancel</button>
+   <label class="small" style="min-width:0"><input type="checkbox" id="safeon" onchange="drawSafe()"> safe areas</label></div>
+  <div class="small" id="pvmsg"></div>
+  <details id="pvdet" style="display:none"><summary>Details</summary><pre id="pvlog" style="max-height:140px;overflow:auto;font-size:11px;white-space:pre-wrap"></pre></details></div>
+ <div class="card"><h3>Layout Template</h3>
+  <div class="row fit"><label>Master</label><input type="checkbox" id="layouton" checked onchange="setLayoutEnabled()"><span class="small">OFF hides profile/logo/top-text overlays only. Video, blur background and transcript captions stay visible.</span></div>
+  <div class="small" style="margin:4px 0">Shared 9:16 master composition for TikTok, YouTube Shorts, Facebook Reels and Instagram Reels. Platform selection changes safe-area guidance only.</div>
+  <div class="row fit"><label>Background blur</label><input type="range" id="blur" min="0" max="35" step="1" value="20" onchange="saveTpl()"><label>Darken</label><input type="range" id="darken" min="0" max="0.8" step="0.01" value="0.05" onchange="saveTpl()"></div>
+  <div class="small" id="blurnote" style="margin:-2px 0 4px"></div>
+  <div class="row"><label>Name</label><input type="text" id="tname" onchange="saveTpl()"><input type="text" id="thandle" onchange="saveTpl()"></div>
+  <div class="row fit"><label>Verified</label><input type="checkbox" id="tver" onchange="saveTpl()"><label>Profile</label><input type="checkbox" id="tpon" checked onchange="saveTpl()"><label>Ring</label><input type="color" id="tring" value="#7a2a5a" onchange="saveTpl()"></div>
+  <div class="row"><label>Avatar</label><input type="file" id="tav" accept="image/*" onchange="upAsset(this,'avatar')"></div>
+  <div class="row fit"><label>Logo</label><input type="checkbox" id="tlon" onchange="saveTpl()"><input type="text" id="tltxt" placeholder="wordmark text" onchange="saveTpl()" style="flex:1"><input type="file" id="tlf" accept="image/*" onchange="upAsset(this,'logo')" style="width:110px"></div></div>
+ <div class="card"><h3>Top On-Screen Caption</h3>
+  <div class="small">Independent from transcript captions. These layers sit on the final 9:16 video and follow the Layout Template master switch.</div>
+  <div class="toplayers" id="toplayers"></div><div id="topempty" class="topempty" style="display:none">No top text layers.</div>
+  <div class="row fit"><button onclick="addTop()">+ Add Text</button><button class="bad" onclick="removeTop()">Remove Text</button><button onclick="moveTop(-1)">↑</button><button onclick="moveTop(1)">↓</button><span class="small" id="topnote"></span></div>
+  <div class="row"><label>Text</label><input id="ttxt" type="text" onchange="topRead()"></div>
+  <div class="row fit"><label>Enabled</label><input type="checkbox" id="ten" onchange="topRead()"><label>X</label><input type="number" id="tx" min="0" max="1" step="0.01" onchange="topRead()"><label>Y</label><input type="number" id="ty" min="0" max="1" step="0.01" onchange="topRead()"></div>
+  <div class="row fit"><label>Font</label><select id="tfont" style="width:190px" onchange="topRead()"></select><label>Size</label><input type="number" id="tsize" min="0.005" max="0.15" step="0.002" style="width:78px" onchange="topRead()"><label>Color</label><input type="color" id="tcol" onchange="topRead()"><label>Bold</label><input type="checkbox" id="tbold" onchange="topRead()"></div>
+  <div class="row fit"><label>Align</label><select id="talign" style="width:90px" onchange="topRead()"><option>left</option><option selected>center</option><option>right</option></select><label>Outline</label><input type="number" id="tol" min="0" max="0.02" step="0.001" style="width:65px" onchange="topRead()"><input type="color" id="tolc" onchange="topRead()"><label>Shadow</label><input type="number" id="tsh" min="0" max="0.02" step="0.001" style="width:65px" onchange="topRead()"></div>
+  <div class="row fit"><button class="pri" onclick="applyTop()">Apply Changes</button><button onclick="cancelTop()">Cancel Changes</button></div></div>
+ <div class="card"><h3>Sound effects (editable events)</h3>
+  <div class="row"><select id="sfxsel"></select><button onclick="addSfx()" style="flex:0 0 auto">+ Add at playhead</button></div>
+  <div class="row"><input type="file" id="sfxfile" accept="audio/*" onchange="importSfx(this)"><button onclick="pre()" style="flex:0 0 auto">▶</button></div>
+  <div class="tl" id="tl"></div><div id="sfxl"></div><div class="small">Drag a marker to move it. Each event can be muted, ducked under speech, re-gained or deleted. Nothing is baked in until render.</div></div>
+ <div class="card"><h3>4 · Export</h3>
+  <div class="row"><label>Quality</label><select id="xpre"></select></div>
+  <div class="row"><label>Codec</label><select id="xcod"><option value="h264">H.264</option><option value="h265">H.265</option><option value="av1">AV1</option></select><select id="xq"><option value="high">high</option><option value="balanced">balanced</option><option value="small">small</option></select></div>
+  <div class="row fit"><input type="checkbox" id="xhw" checked><label for="xhw" style="min-width:0">hardware encoder</label><input type="checkbox" id="xden"><label for="xden" style="min-width:0">denoise</label><input type="checkbox" id="xln"><label for="xln" style="min-width:0">loudness −14 LUFS</label></div>
+  <div class="row fit"><input type="checkbox" id="xint"><label for="xint" style="min-width:0">motion-interpolate (only if fps &gt; source; labeled)</label></div>
+  <div class="row"><button class="pri" onclick="renderSel(false)">Render accepted clips</button><button class="bad" id="xcancel" onclick="cancelJob()" style="display:none;flex:0 0 auto">Cancel</button></div>
+  <div class="small" id="xstate"></div>
+  <div id="results"></div><details><summary>Export history</summary><div id="hist" class="small"></div></details></div>
+</section></main>
+<div id="fmtmodal" class="mback" hidden onmousedown="if(event.target===this)closeFormat()">
+ <div class="mdlg" role="dialog" aria-modal="true" aria-labelledby="fmttitle" aria-describedby="fmtsub">
+  <div class="mhd"><h2 id="fmttitle">Choose Video Format</h2><p id="fmtsub" class="small">Pick the 9:16 layout used for the preview and for every exported clip. Nothing changes until you press Okay.</p></div>
+  <div class="mbd"><div class="fgrid" id="fmtgrid" role="radiogroup" aria-labelledby="fmttitle"></div></div>
+  <div class="mft"><span class="small" id="fmtnote" style="flex:1"></span><button id="fmtcancel" onclick="closeFormat()">Cancel</button><button id="fmtok" class="pri" onclick="applyFormat()">Okay</button></div>
+ </div></div>
+<script src="/static/app.js"></script></body></html>

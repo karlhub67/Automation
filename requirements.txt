@@ -1,0 +1,6 @@
+flask>=3.0
+numpy
+opencv-python-headless>=4.8,<5
+Pillow
+# Optional but strongly recommended - real speech-to-text with word timestamps:
+# faster-whisper
